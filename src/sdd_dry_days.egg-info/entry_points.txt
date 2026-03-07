@@ -1,0 +1,2 @@
+[console_scripts]
+sdd = sdd_dry_days.__main__:main
