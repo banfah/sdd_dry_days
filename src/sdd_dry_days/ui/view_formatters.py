@@ -386,9 +386,12 @@ class ViewFormatter:
         stats_30: PeriodStats,
         stats_60: PeriodStats,
         stats_90: PeriodStats,
+        stats_120: PeriodStats,
+        stats_150: PeriodStats,
+        stats_180: PeriodStats,
         current_streak: int
     ):
-        """Display statistics view with metrics from 30, 60, and 90-day periods.
+        """Display statistics view with metrics from 30, 60, 90, 120, 150 and 180-day periods.
 
         Shows comprehensive statistics including dry day counts, percentages,
         longest streaks, and current streak across three time periods. Uses tables
@@ -398,6 +401,9 @@ class ViewFormatter:
             stats_30: PeriodStats instance for the 30-day period.
             stats_60: PeriodStats instance for the 60-day period.
             stats_90: PeriodStats instance for the 90-day period.
+            stats_120: PeriodStats instance for the 120-day period.
+            stats_150: PeriodStats instance for the 150-day period.
+            stats_180: PeriodStats instance for the 180-day period.
             current_streak: Current consecutive dry day streak.
         """
         # Create header panel with current streak
@@ -419,8 +425,8 @@ class ViewFormatter:
         table.add_column("Progress", justify="left", style="")
         table.add_column("Longest Streak", justify="center", style="")
 
-        # Add rows for each period (30d, 60d, 90d)
-        for period_name, stats in [("30d", stats_30), ("60d", stats_60), ("90d", stats_90)]:
+        # Add rows for each period (30d, 60d, 90d, 120d, 150d, 180d)
+        for period_name, stats in [("30d", stats_30), ("60d", stats_60), ("90d", stats_90), ("120d", stats_120), ("150d", stats_150), ("180d", stats_180)]:
             # Check for limited data and format period display
             if stats.available_days < stats.requested_days:
                 period_display = f"{period_name} [dim](limited data: {stats.available_days}/{stats.requested_days} days)[/dim]"

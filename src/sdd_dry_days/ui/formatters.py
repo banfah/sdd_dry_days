@@ -9,6 +9,7 @@ from datetime import datetime
 
 from rich.console import Console
 from rich.panel import Panel
+from rich.table import Table
 from rich.text import Text
 
 
@@ -141,3 +142,87 @@ class OutputFormatter:
             -> Returns True
         """
         return self.console.input(f"[yellow]{message} (y/N): [/yellow]").lower() == 'y'
+
+    def display_import_summary(self, total_lines: int, success_count: int,
+                                duplicate_count: int, errors: list):
+        """Display import summary with counts and errors.
+
+        Shows a panel with statistics about the import operation including total
+        lines processed, successfully added dates, duplicates skipped, and errors.
+        If errors exist, displays a table with line numbers, content, and reasons.
+        Shows special messages based on import results.
+
+        Args:
+            total_lines: Total number of lines processed from the import file.
+            success_count: Number of dry days successfully added.
+            duplicate_count: Number of dates that were already recorded (duplicates).
+            errors: List of tuples containing (line_number, content, reason) for each error.
+
+        Example:
+            📥 Import Summary
+            Total lines processed: 10
+            ✓ Successfully added: 5
+            ℹ Duplicates skipped: 3
+            ❌ Errors: 2
+
+            [Error table if errors exist]
+
+            ✓ Import completed successfully!
+        """
+        text = Text()
+
+        # Display counts
+        text.append(f"Total lines processed: {total_lines}\n", style="bold")
+
+        # Success count - green if > 0
+        if success_count > 0:
+            text.append("✓ ", style="bold green")
+            text.append(f"Successfully added: ", style="green")
+            text.append(f"{success_count}\n", style="bold #00FF00")
+        else:
+            text.append(f"Successfully added: {success_count}\n")
+
+        # Duplicates count
+        if duplicate_count > 0:
+            text.append("ℹ ", style="bold blue")
+            text.append(f"Duplicates skipped: ", style="blue")
+            text.append(f"{duplicate_count}\n", style="bold blue")
+        else:
+            text.append(f"Duplicates skipped: {duplicate_count}\n")
+
+        # Errors count
+        if errors:
+            text.append("❌ ", style="bold red")
+            text.append(f"Errors: ", style="red")
+            text.append(f"{len(errors)}", style="bold red")
+        else:
+            text.append(f"Errors: 0")
+
+        panel = Panel(text, title="📥 Import Summary", border_style="green", expand=False)
+        self.console.print(panel)
+
+        # Display error table if there are errors
+        if errors:
+            self.console.print()
+            table = Table(title="Import Errors", show_header=True, header_style="bold red")
+            table.add_column("Line", style="cyan", justify="right")
+            table.add_column("Content", style="yellow")
+            table.add_column("Reason", style="red")
+
+            for line_num, content, reason in errors:
+                table.add_row(str(line_num), content, reason)
+
+            self.console.print(table)
+
+        # Display success message or special case message
+        self.console.print()
+        if success_count > 0:
+            success_text = Text()
+            success_text.append("✓ ", style="bold green")
+            success_text.append("Import completed successfully!", style="green")
+            self.console.print(success_text)
+        elif success_count == 0 and duplicate_count > 0:
+            info_text = Text()
+            info_text.append("ℹ ", style="bold blue")
+            info_text.append("All dates already recorded. No new dry days added.", style="blue")
+            self.console.print(info_text)

@@ -11,6 +11,7 @@ easy for users to track their alcohol-free days.
 
 import argparse
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import List, Optional
 
 from rich.console import Console
@@ -135,6 +136,13 @@ class CLI:
             help="Show custom date range"
         )
 
+        # Import command
+        import_parser = subparsers.add_parser("import", help="Import dry days from text file")
+        import_parser.add_argument(
+            "filepath",
+            help="Path to text file containing dates (one per line)"
+        )
+
         return parser
 
     def run(self, args: List[str] = None):
@@ -159,6 +167,8 @@ class CLI:
             self._handle_add(parsed_args)
         elif parsed_args.command == "view":
             self._handle_view(parsed_args)
+        elif parsed_args.command == "import":
+            self._handle_import(parsed_args)
         else:
             self.parser.print_help()
 
@@ -536,9 +546,9 @@ class CLI:
             self.view_formatter.display_month_view(stats)
 
     def _view_stats(self):
-        """Display 30/60/90 day statistics view.
+        """Display 30/60/90/120/150/180 day statistics view.
 
-        Shows a comprehensive statistics table with three time periods (30, 60, and 90 days).
+        Shows a comprehensive statistics table with three time periods (30, 60, 90, 120, 150 and 180 days).
         For each period, displays dry days count, total days, percentage, and longest streak.
         Includes visual progress bars and the current active streak at the top.
 
@@ -553,6 +563,9 @@ class CLI:
             | Last 30d  | 25       | 30         | 83%        | 7 days         |
             | Last 60d  | 45       | 60         | 75%        | 12 days        |
             | Last 90d  | 60       | 90         | 67%        | 15 days        |
+            | Last 120d  | 60       | 90         | 67%        | 15 days        |
+            | Last 150d  | 61       | 91         | 67%        | 16 days        |
+            | Last 180d  | 62       | 92         | 67%        | 17 days        |
 
             Each row includes a visual progress bar showing percentage completion.
         """
@@ -563,6 +576,9 @@ class CLI:
         start_30 = today - timedelta(days=30)
         start_60 = today - timedelta(days=60)
         start_90 = today - timedelta(days=90)
+        start_120 = today - timedelta(days=120)
+        start_150 = today - timedelta(days=150)
+        start_180 = today - timedelta(days=180)
 
         # Fetch all dry days
         all_dry_days = self.storage.get_all_dry_days()
@@ -577,12 +593,21 @@ class CLI:
         stats_90 = StatisticsCalculator.calculate_period_stats(
             all_dry_days, start_90, today, all_dry_days
         )
+        stats_120 = StatisticsCalculator.calculate_period_stats(
+            all_dry_days, start_120, today, all_dry_days
+        )
+        stats_150 = StatisticsCalculator.calculate_period_stats(
+            all_dry_days, start_150, today, all_dry_days
+        )
+        stats_180 = StatisticsCalculator.calculate_period_stats(
+            all_dry_days, start_180, today, all_dry_days
+        )
 
         # Calculate current streak
         current_streak = self.streak_calculator.calculate_current_streak(all_dry_days)
 
         # Display
-        self.view_formatter.display_stats_view(stats_30, stats_60, stats_90, current_streak)
+        self.view_formatter.display_stats_view(stats_30, stats_60, stats_90, stats_120, stats_150, stats_180, current_streak)
 
     def _view_range(self, start_str: str, end_str: str):
         """Display custom date range view with validation.
@@ -656,3 +681,119 @@ class CLI:
             )
         else:
             self.view_formatter.display_range_view(stats, dry_days)
+
+    def _handle_import(self, args):
+        """Handle the import command by reading, parsing, and validating dates from a text file.
+
+        Validates the file path, checks file permissions, reads the file content,
+        parses each line as a date, and tracks both successful parses and errors.
+        This method handles all file-level operations and line-by-line date parsing.
+
+        Processing logic:
+            - Iterates through lines with line numbers (starting from 1)
+            - Strips whitespace from each line
+            - Skips empty lines (after stripping)
+            - Skips comment lines (lines starting with #)
+            - Parses each remaining line using DateParser.parse()
+            - Catches DateParseError per line, logs error, continues processing
+            - Tracks parsed dates and errors separately
+
+        Args:
+            args: Parsed arguments from argparse containing the filepath.
+
+        Error handling:
+            - File not found: Displays error and returns
+            - Permission error: Displays error and returns
+            - Empty file: Displays error and returns
+            - Invalid date format: Logs "Line X: Invalid date format 'content'. Skipped." and continues
+
+        Example:
+            >>> self._handle_import(args)  # args.filepath="/path/to/dates.txt"
+            # Parses dates, tracks errors, and continues to Task 1.3 (storage operations)
+        """
+        # Validate file path using pathlib.Path
+        file_path = Path(args.filepath)
+
+        # Handle FileNotFoundError (AC-3.1)
+        if not file_path.exists():
+            self.formatter.error(
+                f"File not found: {args.filepath}",
+                "Please check the path and try again."
+            )
+            return
+
+        # Handle PermissionError (AC-3.2)
+        try:
+            # Open file with context manager (AC-1.1)
+            with open(file_path, 'r', encoding='utf-8') as f:
+                # Read all lines
+                raw_lines = f.readlines()
+        except PermissionError:
+            self.formatter.error(
+                f"Cannot read file: {args.filepath}",
+                "Check file permissions."
+            )
+            return
+
+        # Parse lines and track results
+        parsed_dates = []
+        errors = []
+        total_lines = 0
+
+        # Iterate through lines with line numbers (start=1) (AC-4.2)
+        for line_num, line in enumerate(raw_lines, start=1):
+            # Strip whitespace
+            line = line.strip()
+
+            # Skip empty lines (AC-1.2)
+            if not line:
+                continue
+
+            # Skip comment lines (AC-4.3)
+            if line.startswith('#'):
+                continue
+
+            # Count non-empty, non-comment lines
+            total_lines += 1
+
+            # Parse line with DateParser (AC-1.3)
+            try:
+                date = DateParser.parse(line)
+                parsed_dates.append(date)
+            except DateParseError as e:
+                # Log error and continue (AC-3.4, AC-3.5)
+                error_msg = f"Line {line_num}: Invalid date format '{line}'. Skipped."
+                errors.append((line_num, line, str(e)))
+                # TODO: Display error message to user (will be done in Task 1.3/1.4)
+                continue
+
+        # Check if file had no valid content (AC-3.3)
+        if total_lines == 0:
+            self.formatter.error(
+                "File is empty",
+                "Add dates (one per line) and try again."
+            )
+            return
+
+        # Task 1.3: Storage operations
+        # Process each parsed date: create DryDay instance and add to storage
+        success_count = 0
+        duplicate_count = 0
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+        for date in parsed_dates:
+            # Determine if it's a planned day (future date)
+            is_planned = date.date() > today.date()
+
+            # Create DryDay instance (no note for imported days)
+            dry_day = DryDay(date=date, note="", is_planned=is_planned)
+
+            # Add to storage
+            # storage.add_dry_day() returns True if added, False if duplicate
+            if self.storage.add_dry_day(dry_day):
+                success_count += 1
+            else:
+                duplicate_count += 1
+
+        # Display summary (Task 2 will implement this method)
+        self.formatter.display_import_summary(total_lines, success_count, duplicate_count, errors)

@@ -418,3 +418,175 @@ class TestOutputFormatterInitialization:
         assert hasattr(formatter, 'console')
         from rich.console import Console
         assert isinstance(formatter.console, Console)
+
+
+class TestImportSummaryDisplay:
+    """Tests for import summary formatter display."""
+
+    def test_display_import_summary_shows_all_counts(self):
+        """Test that import summary displays all counts correctly."""
+        formatter = OutputFormatter()
+        formatter.console = Mock()
+
+        # Call with typical import results
+        formatter.display_import_summary(
+            total_lines=10,
+            success_count=7,
+            duplicate_count=2,
+            errors=[(5, "invalid-date", "Invalid date format")]
+        )
+
+        # Verify console.print was called (at least for the panel, possibly for table)
+        assert formatter.console.print.called
+
+        # Get all print calls
+        print_calls = formatter.console.print.call_args_list
+
+        # Find the Panel call (should be the last or one of the calls)
+        panel_call = None
+        for call in print_calls:
+            if call[0] and isinstance(call[0][0], Panel):
+                panel_call = call[0][0]
+                break
+
+        assert panel_call is not None, "Panel should be printed"
+        assert isinstance(panel_call, Panel)
+
+        # Verify panel content includes all counts
+        renderable = panel_call.renderable
+        text_str = str(renderable)
+
+        assert "10" in text_str  # Total lines
+        assert "7" in text_str   # Success count
+        assert "2" in text_str   # Duplicate count
+        assert "1" in text_str   # Error count
+
+    def test_display_import_summary_with_no_errors(self):
+        """Test that import summary without errors displays cleanly."""
+        formatter = OutputFormatter()
+        formatter.console = Mock()
+
+        # Call with successful import (no errors)
+        formatter.display_import_summary(
+            total_lines=5,
+            success_count=5,
+            duplicate_count=0,
+            errors=[]
+        )
+
+        # Verify console.print was called
+        assert formatter.console.print.called
+
+        # Get the Panel call
+        print_calls = formatter.console.print.call_args_list
+        panel_call = None
+        for call in print_calls:
+            if call[0] and isinstance(call[0][0], Panel):
+                panel_call = call[0][0]
+                break
+
+        assert panel_call is not None
+        renderable = panel_call.renderable
+        text_str = str(renderable)
+
+        # Verify counts shown
+        assert "5" in text_str  # Total and success count
+        assert "0" in text_str  # Duplicates and errors
+
+        # Verify success message present
+        assert "completed successfully" in text_str.lower()
+
+    def test_display_import_summary_with_errors_shows_table(self):
+        """Test that import summary with errors displays error table."""
+        formatter = OutputFormatter()
+        formatter.console = Mock()
+
+        # Call with multiple errors
+        errors = [
+            (2, "not-a-date", "Invalid date format"),
+            (5, "99/99/9999", "Day out of range"),
+            (8, "invalid", "Unrecognized format")
+        ]
+
+        formatter.display_import_summary(
+            total_lines=10,
+            success_count=7,
+            duplicate_count=0,
+            errors=errors
+        )
+
+        # Verify console.print was called multiple times (for table and panel)
+        assert formatter.console.print.call_count >= 2
+
+        # Check that a Table was printed (for errors)
+        from rich.table import Table
+        table_printed = False
+        for call in formatter.console.print.call_args_list:
+            if call[0] and isinstance(call[0][0], Table):
+                table_printed = True
+                break
+
+        assert table_printed, "Error table should be printed when errors exist"
+
+    def test_display_import_summary_all_duplicates_message(self):
+        """Test that special message is shown when all dates are duplicates."""
+        formatter = OutputFormatter()
+        formatter.console = Mock()
+
+        # Call with all duplicates (no new dates added)
+        formatter.display_import_summary(
+            total_lines=5,
+            success_count=0,
+            duplicate_count=5,
+            errors=[]
+        )
+
+        # Verify console.print was called
+        assert formatter.console.print.called
+
+        # Get the Panel call
+        print_calls = formatter.console.print.call_args_list
+        panel_call = None
+        for call in print_calls:
+            if call[0] and isinstance(call[0][0], Panel):
+                panel_call = call[0][0]
+                break
+
+        assert panel_call is not None
+        renderable = panel_call.renderable
+        text_str = str(renderable).lower()
+
+        # Verify special message for all duplicates
+        assert "already recorded" in text_str or "no new" in text_str
+
+    def test_display_import_summary_uses_green_for_success(self):
+        """Test that success count is displayed in green when > 0."""
+        formatter = OutputFormatter()
+        formatter.console = Mock()
+
+        # Call with successful imports
+        formatter.display_import_summary(
+            total_lines=3,
+            success_count=3,
+            duplicate_count=0,
+            errors=[]
+        )
+
+        # Verify console.print was called
+        assert formatter.console.print.called
+
+        # Get the Panel call
+        print_calls = formatter.console.print.call_args_list
+        panel_call = None
+        for call in print_calls:
+            if call[0] and isinstance(call[0][0], Panel):
+                panel_call = call[0][0]
+                break
+
+        assert panel_call is not None
+
+        # Verify panel has green border style (success indicator)
+        assert panel_call.border_style == "green"
+
+        # Verify panel title includes import emoji
+        assert "📥" in panel_call.title or "Import" in panel_call.title

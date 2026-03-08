@@ -56,8 +56,7 @@ The application follows strict separation of concerns across four layers:
 
 2. **Business Logic Layer** (`core/`)
    - `dry_day.py`: DryDay model, validation, serialization
-   - `streak.py`: Streak calculation (consecutive dry days, period-specific streaks)
-   - `stats.py`: PeriodStats model and StatisticsCalculator for time-period analytics
+   - `streak.py`: Streak calculation (consecutive dry days)
    - Independent of storage implementation
 
 3. **Storage Layer** (`storage/`)
@@ -67,9 +66,8 @@ The application follows strict separation of concerns across four layers:
    - Data stored at `~/.sdd_dry_days/data.json`
 
 4. **Presentation Layer** (`ui/`)
-   - `formatters.py`: Basic Rich library formatting (success/error messages, panels)
-   - `view_formatters.py`: View-specific formatting (tables, progress bars, calendars)
-   - **Composition Pattern**: ViewFormatter uses OutputFormatter as dependency (not inheritance)
+   - `formatters.py`: Rich library-based colorful output
+   - Success messages, error messages, progress indicators
 
 ### Data Flow
 ```
@@ -83,8 +81,6 @@ User Command → CLI → Business Logic → Storage → JSON File
 **Storage Abstraction**: All storage operations go through the abstract `Storage` interface. This allows swapping JSON storage for MongoDB without changing business logic or CLI code.
 
 **Data Model Independence**: The `DryDay` model is storage-agnostic. It serializes to/from dictionaries, letting storage implementations handle persistence.
-
-**Composition Over Inheritance**: ViewFormatter uses OutputFormatter as a dependency rather than inheriting from it. This provides better separation of concerns: OutputFormatter handles simple messages, ViewFormatter handles complex structured views.
 
 **Test-Driven Development**: Tests are written alongside or before implementation. Each component has corresponding unit tests.
 
@@ -146,15 +142,12 @@ from sdd_dry_days.core.dry_day import DryDay
 ### Coverage Targets
 - Overall: >80%
 - Core models: >90%
-- Integration tests must use actual filesystem (with `tmp_path` or `temp_storage_dir` fixture)
-- Current status: 298 tests passing (162 unit, 136 integration)
+- Integration tests must use actual filesystem (with `tmp_path` fixture)
 
 ### Test Organization
 - Mirror source structure in `tests/`
 - Use descriptive names: `test_add_dry_day_for_today_succeeds()`
 - Group related tests in classes: `TestDryDayInstantiation`
-- Integration tests in `tests/integration/` test full CLI workflows
-- Mock `ViewFormatter` display methods in integration tests to verify parameters
 
 ### Key Test Patterns
 ```python
@@ -167,13 +160,6 @@ def test_example(sample_dry_day):
 def test_storage(tmp_path):
     storage = JsonStorage(data_dir=tmp_path)
     # Test with isolated directory
-
-# Mock view formatter in integration tests
-def test_view_command(tmp_path, mocker):
-    cli = CLI(data_dir=tmp_path)
-    mock_display = mocker.patch.object(cli.view_formatter, 'display_list_view')
-    cli._view_list()
-    mock_display.assert_called_once()
 ```
 
 ## Important Implementation Notes
@@ -183,23 +169,6 @@ def test_view_command(tmp_path, mocker):
 - **Auto-timestamps**: `added_at` auto-set to current time if not provided
 - **Future dates**: `is_planned` flag distinguishes future vs past/today
 - **Serialization**: `to_dict()` and `from_dict()` for JSON compatibility
-
-### Statistics Model: PeriodStats
-- **9-field dataclass** for period statistics: start_date, end_date, total_days, dry_days_count, percentage, longest_streak, dry_day_dates, available_days, requested_days
-- **Limited data indicator**: `available_days < requested_days` triggers "(limited data: X/Y days)" display
-- **Used by all view commands** for consistent statistics calculation
-
-### View Architecture
-- **StatisticsCalculator** (static methods):
-  - `get_week_dates()`: Returns Monday-Sunday range for a given date
-  - `get_month_dates()`: Returns first-to-last day of month
-  - `calculate_period_stats()`: Calculates all statistics for a date range
-- **ViewFormatter** (composition pattern):
-  - Accepts Console and OutputFormatter as dependencies
-  - Handles pagination (50 entries per page with "[Press ENTER for more]")
-  - Creates progress bars with color coding (red <50%, yellow 50-75%, green >75%)
-  - Generates calendar grids with ✓ for dry days, * for current day
-  - **Filter-then-sort pattern**: Always applies filter before sort (AC-8.5)
 
 ### Performance Constraints
 - Startup time: < 1 second (lazy load dependencies)
@@ -212,33 +181,17 @@ def test_view_command(tmp_path, mocker):
 - No telemetry or tracking
 - Input validation on all date inputs
 
-## CLI Command Structure
+## CLI Command Structure (Planned)
 
-### Add Commands (Implemented)
 ```bash
 sdd add                              # Add today as dry day
 sdd add 2026-03-06                  # Add specific date (ISO format)
 sdd add 03/06/2026                  # Add specific date (US format)
 sdd add --note "Feeling great!"     # Add with note
 sdd add --range 2026-03-01 2026-03-05  # Add date range
-```
-
-### View Commands (Implemented)
-```bash
-sdd view                            # List all dry days (default: newest first)
-sdd view --sort asc                 # List oldest first
-sdd view --sort desc                # List newest first (default)
-sdd view --filter planned           # Show only future/planned days
-sdd view --filter actual            # Show only past/today days
-sdd view --week                     # Week view (Mon-Sun)
-sdd view --month                    # Month calendar view
-sdd view --stats                    # 30/60/90 day statistics
-sdd view --range 2026-03-01 2026-03-31  # Custom date range
-```
-
-### Future Commands
-```bash
-sdd goal set                        # Set goals (planned)
+sdd view                            # Calendar view (future)
+sdd stats                           # Statistics (future)
+sdd goal set                        # Set goals (future)
 ```
 
 ## Rich Library Usage
