@@ -162,8 +162,8 @@ Each task below meets the atomic criteria:
     - _Leverage: unittest.mock_
     - _Requirements: 2.1, 2.2, 2.3_
 
-- [ ] 5. Unit Tests - Formatter
-  - [ ] 5.1. Create unit tests for import summary formatter
+- [x] 5. Unit Tests - Formatter
+  - [x] 5.1. Create unit tests for import summary formatter
     - File: tests/unit/test_formatters.py (extend existing)
     - **Depends on**: Task 2
     - Test class: `TestImportSummaryDisplay`
@@ -178,8 +178,8 @@ Each task below meets the atomic criteria:
     - _Leverage: Rich Panel, Rich Table, unittest.mock_
     - _Requirements: 2.2, 2.3, 5.1, 5.2, 5.3, 5.4, 5.5_
 
-- [ ] 6. Integration Tests
-  - [ ] 6.1. Create integration tests for import command happy path
+- [x] 6. Integration Tests
+  - [x] 6.1. Create integration tests for import command happy path
     - File: tests/integration/test_import_cli.py (new file)
     - **Depends on**: Tasks 1.1, 1.2, 1.3, 2, 3
     - Test class: `TestImportIntegration`
@@ -193,7 +193,7 @@ Each task below meets the atomic criteria:
     - _Leverage: tmp_path fixture, CLI, JsonStorage_
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 2.1, 2.2, 4.2, 4.3, 4.4, 5.1, 6.2_
 
-  - [ ] 6.2. Create integration tests for import error scenarios
+  - [x] 6.2. Create integration tests for import error scenarios
     - File: tests/integration/test_import_cli.py (continue from task 6.1)
     - **Depends on**: Task 6.1
     - Test class: `TestImportErrorHandling`
@@ -206,7 +206,7 @@ Each task below meets the atomic criteria:
     - _Leverage: tmp_path fixture, os.chmod for permission tests_
     - _Requirements: 1.2, 3.1, 3.2, 3.3, 6.3_
 
-  - [ ] 6.3. Add performance verification test
+  - [x] 6.3. Add performance verification test
     - File: tests/integration/test_import_cli.py (continue from task 6.2)
     - **Depends on**: Task 6.1
     - Test class: `TestImportPerformance`

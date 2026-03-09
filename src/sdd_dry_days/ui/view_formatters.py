@@ -419,7 +419,7 @@ class ViewFormatter:
 
         # Create Rich Table with columns
         table = Table(show_header=True, header_style="bold cyan")
-        table.add_column("Period", justify="left", style="cyan")
+        table.add_column("Period", justify="right", style="cyan")
         table.add_column("Dry Days", justify="center", style="")
         table.add_column("Total Days", justify="center", style="")
         table.add_column("Progress", justify="left", style="")

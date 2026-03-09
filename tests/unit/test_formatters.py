@@ -474,8 +474,8 @@ class TestImportSummaryDisplay:
             errors=[]
         )
 
-        # Verify console.print was called
-        assert formatter.console.print.called
+        # Verify console.print was called multiple times (panel + success message)
+        assert formatter.console.print.call_count >= 2
 
         # Get the Panel call
         print_calls = formatter.console.print.call_args_list
@@ -489,12 +489,21 @@ class TestImportSummaryDisplay:
         renderable = panel_call.renderable
         text_str = str(renderable)
 
-        # Verify counts shown
+        # Verify counts shown in panel
         assert "5" in text_str  # Total and success count
         assert "0" in text_str  # Duplicates and errors
 
-        # Verify success message present
-        assert "completed successfully" in text_str.lower()
+        # Verify success message was printed separately (as Text object)
+        from rich.text import Text
+        success_message_found = False
+        for call in print_calls:
+            if call[0] and isinstance(call[0][0], Text):
+                text_obj = call[0][0]
+                if "completed successfully" in str(text_obj).lower():
+                    success_message_found = True
+                    break
+
+        assert success_message_found, "Success message should be printed"
 
     def test_display_import_summary_with_errors_shows_table(self):
         """Test that import summary with errors displays error table."""
@@ -541,8 +550,8 @@ class TestImportSummaryDisplay:
             errors=[]
         )
 
-        # Verify console.print was called
-        assert formatter.console.print.called
+        # Verify console.print was called multiple times
+        assert formatter.console.print.call_count >= 2
 
         # Get the Panel call
         print_calls = formatter.console.print.call_args_list
@@ -556,8 +565,22 @@ class TestImportSummaryDisplay:
         renderable = panel_call.renderable
         text_str = str(renderable).lower()
 
-        # Verify special message for all duplicates
-        assert "already recorded" in text_str or "no new" in text_str
+        # Verify counts in panel
+        assert "0" in text_str  # Success count should be 0
+        assert "5" in text_str  # Duplicates and total
+
+        # Verify special message was printed separately (as Text object)
+        from rich.text import Text
+        special_message_found = False
+        for call in print_calls:
+            if call[0] and isinstance(call[0][0], Text):
+                text_obj = call[0][0]
+                text_content = str(text_obj).lower()
+                if "already recorded" in text_content or "no new" in text_content:
+                    special_message_found = True
+                    break
+
+        assert special_message_found, "Special message for all duplicates should be printed"
 
     def test_display_import_summary_uses_green_for_success(self):
         """Test that success count is displayed in green when > 0."""
