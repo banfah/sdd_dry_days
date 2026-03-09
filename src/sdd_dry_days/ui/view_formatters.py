@@ -210,15 +210,16 @@ class ViewFormatter:
         # Create header panel
         header_panel = Panel(
             header_text,
-            title="📅 Week View",
+            title="Week View",
             border_style="green",
-            padding=(1, 2)
+            padding=(1, 2),
+            expand=True  # Align with table width below
         )
         self.console.print(header_panel)
         self.console.print()  # Add spacing
 
         # Create Rich Table for day-by-day breakdown
-        table = Table(show_header=True, header_style="bold cyan")
+        table = Table(show_header=True, header_style="bold cyan", expand=True)
         table.add_column("Day", justify="left", style="cyan")
         table.add_column("Date", justify="left", style="")
         table.add_column("Status", justify="center", style="")
@@ -407,18 +408,19 @@ class ViewFormatter:
             current_streak: Current consecutive dry day streak.
         """
         # Create header panel with current streak
-        header_text = f"Current Streak: 🔥 [green bold]{current_streak}[/green bold] days"
+        header_text = f"Current Streak: [green bold]{current_streak}[/green bold] days"
         header_panel = Panel(
             header_text,
-            title="📈 Statistics Overview",
+            title="Statistics Overview",
             border_style="green",
-            padding=(1, 2)
+            padding=(1, 2),
+            expand=True  # Align with table width below
         )
         self.console.print(header_panel)
         self.console.print()  # Add spacing
 
         # Create Rich Table with columns
-        table = Table(show_header=True, header_style="bold cyan")
+        table = Table(show_header=True, header_style="bold cyan", expand=True)
         table.add_column("Period", justify="right", style="cyan")
         table.add_column("Dry Days", justify="center", style="")
         table.add_column("Total Days", justify="center", style="")
@@ -442,9 +444,9 @@ class ViewFormatter:
             # Use create_progress_bar for visual progress display
             progress_display = self.create_progress_bar(stats.percentage)
 
-            # Format longest streak with fire emoji
+            # Format longest streak
             if stats.longest_streak > 0:
-                longest_streak_str = f"🔥 {stats.longest_streak} days"
+                longest_streak_str = f"{stats.longest_streak} days"
             else:
                 longest_streak_str = "-"
 
@@ -534,20 +536,21 @@ class ViewFormatter:
 
         # Add longest streak if present
         if stats.longest_streak > 0:
-            header_text += f"\nLongest Streak: 🔥 [green bold]{stats.longest_streak}[/green bold] days"
+            header_text += f"\nLongest Streak: [green bold]{stats.longest_streak}[/green bold] days"
 
         # Create header panel
         header_panel = Panel(
             header_text,
-            title="📊 Range View",
+            title="Range View",
             border_style="green",
-            padding=(1, 2)
+            padding=(1, 2),
+            expand=True  # Align with table width below
         )
         self.console.print(header_panel)
         self.console.print()  # Add spacing
 
         # Create Rich Table for day-by-day breakdown
-        table = Table(show_header=True, header_style="bold cyan")
+        table = Table(show_header=True, header_style="bold cyan", expand=True)
         table.add_column("Date", justify="left", style="cyan")
         table.add_column("Status", justify="center", style="")
         table.add_column("Notes", justify="left", style="dim")
