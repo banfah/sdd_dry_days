@@ -42,7 +42,7 @@ class OutputFormatter:
 
         Example:
             ✓ Dry day added: 2026-03-07
-            🔥 Current streak: 5 days
+              Current streak: 5 days
         """
         text = Text()
         text.append("✓ ", style="bold green")
@@ -50,7 +50,7 @@ class OutputFormatter:
         text.append(f"{date.strftime('%Y-%m-%d')}", style="bold cyan")
 
         if streak > 0:
-            text.append(f"\n🔥 Current streak: ", style="yellow")
+            text.append(f"\nCurrent streak: ", style="yellow")
             text.append(f"{streak} day{'s' if streak != 1 else ''}", style="bold yellow")
 
         panel = Panel(text, border_style="green", expand=False)
@@ -123,6 +123,25 @@ class OutputFormatter:
             text.append(f"\n{details}", style="dim")
 
         panel = Panel(text, border_style="red", expand=False)
+        self.console.print(panel)
+
+    def info(self, message: str):
+        """Display informational message.
+
+        Shows a blue panel with an info icon and the message. Used for
+        general informational messages, encouragement, and guidance.
+
+        Args:
+            message: Informational message to display.
+
+        Example:
+            ℹ Start your week strong! Add your first dry day.
+        """
+        text = Text()
+        text.append("ℹ ", style="bold blue")
+        text.append(message, style="blue")
+
+        panel = Panel(text, border_style="blue", expand=False)
         self.console.print(panel)
 
     def confirm(self, message: str) -> bool:

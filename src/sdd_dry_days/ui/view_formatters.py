@@ -202,7 +202,8 @@ class ViewFormatter:
 
         # Create header text with progress information
         header_text = f"{week_range}\n"
-        header_text += f"Progress: [green bold]{stats.dry_days}/7 days ({stats.percentage}%)[/green bold]\n"
+        stats.percentage = round(stats.percentage,2)
+        header_text += f"Progress: [green bold]{stats.dry_days_count}/7 days ({stats.percentage}%)[/green bold]\n"
 
         # Add progress bar using create_progress_bar
         header_text += self.create_progress_bar(stats.percentage)
@@ -291,20 +292,20 @@ class ViewFormatter:
                     # Format cell: "DD✓*" or "DD-" with Rich markup
                     # Use 5 characters per cell for alignment (including spaces)
                     if is_dry:
-                        status = "[green]✓[/green]"
+                        if is_today:
+                            cell = f"[green on blue]{day_num:2d}[/green on blue]  "
+                        else:
+                            cell = f"[green]{day_num:2d}[/green]  "
                     else:
-                        status = "[red]-[/red]"
-
-                    if is_today:
-                        # Bold the day number and add asterisk
-                        cell = f"[bold]{day_num:2d}{status}*[/bold]"
-                    else:
-                        cell = f"{day_num:2d}{status} "
+                        if is_today:
+                            cell = f"[red on blue]{day_num:2d}[/red on blue]  "
+                        else:
+                            cell = f"[red]{day_num:2d}[/red]  "
 
                     week_cells.append(cell)
                 else:
                     # Day outside current month - empty cell
-                    week_cells.append("     ")
+                    week_cells.append("    ")
 
                 current_date += timedelta(days=1)
 
@@ -314,7 +315,7 @@ class ViewFormatter:
         # Combine header and grid
         return header + "\n".join(grid_lines)
 
-    def display_month_view(self, stats: PeriodStats):
+    def display_month_view(self, stats: PeriodStats, current_streak: int):
         """Display month view with calendar-style layout.
 
         Shows a month summary with statistics and a calendar-style grid displaying
@@ -323,6 +324,7 @@ class ViewFormatter:
 
         Args:
             stats: PeriodStats instance for the month period.
+            current_streak: Current consecutive dry day streak.
         """
         # Get month name from start date
         month_name = stats.start_date.strftime('%B %Y')
@@ -332,7 +334,8 @@ class ViewFormatter:
 
         # Create header text with progress information
         header_text = f"{month_name}\n"
-        header_text += f"Progress: [green bold]{stats.dry_days}/{total_days} days ({stats.percentage}%)[/green bold]\n"
+        stats.percentage = round(stats.percentage,2)
+        header_text += f"Progress: [green bold]{stats.dry_days_count}/{total_days} days ({stats.percentage}%)[/green bold]\n"
 
         # Add progress bar using create_progress_bar
         header_text += self.create_progress_bar(stats.percentage)
@@ -340,7 +343,7 @@ class ViewFormatter:
         # Create header panel
         header_panel = Panel(
             header_text,
-            title="📅 Month View",
+            title="Month View",
             border_style="green",
             padding=(1, 2)
         )
@@ -358,21 +361,10 @@ class ViewFormatter:
         self.console.print(calendar_panel)
         self.console.print()  # Add spacing
 
-        # Display legend
-        legend_text = "[green]✓[/green]=Dry  [red]-[/red]=Not Dry  [bold]*[/bold]=Today"
-        legend_panel = Panel(
-            legend_text,
-            title="Legend",
-            border_style="dim",
-            padding=(0, 2)
-        )
-        self.console.print(legend_panel)
-        self.console.print()  # Add spacing
-
-        # Display current streak with fire emoji
-        streak_text = f"Current Streak: 🔥 [green bold]{stats.current_streak}[/green bold] days"
+        # Display current streak
+        streak_text = f"Current Streak: [green bold]{current_streak}[/green bold] days"
         if stats.longest_streak > 0:
-            streak_text += f"\nLongest Streak: 🔥 [green bold]{stats.longest_streak}[/green bold] days"
+            streak_text += f"\nLongest Streak: [green bold]{stats.longest_streak}[/green bold] days"
 
         streak_panel = Panel(
             streak_text,
@@ -522,32 +514,10 @@ class ViewFormatter:
             range_str = f"Range: {start_date.strftime('%B')} {start_date.day}-{end_date.day}, {start_date.year}"
         else:
             # Different months (handle cross-month ranges)
-            range_str = f"Range: {start_date.strftime('%B')} {start_date.day} - {end_date.strftime('%B')} {end_date.day}, {start_date.year}"
+            range_str = f"Range: {start_date.strftime('%B')} {start_date.day}, {start_date.year} - {end_date.strftime('%B')} {end_date.day}, {end_date.year}"
 
         # Calculate total days in range
         total_days = (end_date - start_date).days + 1
-
-        # Create header text with progress information
-        header_text = f"{range_str}\n"
-        header_text += f"Progress: [green bold]{stats.dry_days_count}/{total_days} days ({stats.percentage}%)[/green bold]\n"
-
-        # Add progress bar using create_progress_bar
-        header_text += self.create_progress_bar(stats.percentage)
-
-        # Add longest streak if present
-        if stats.longest_streak > 0:
-            header_text += f"\nLongest Streak: [green bold]{stats.longest_streak}[/green bold] days"
-
-        # Create header panel
-        header_panel = Panel(
-            header_text,
-            title="Range View",
-            border_style="green",
-            padding=(1, 2),
-            expand=True  # Align with table width below
-        )
-        self.console.print(header_panel)
-        self.console.print()  # Add spacing
 
         # Create Rich Table for day-by-day breakdown
         table = Table(show_header=True, header_style="bold cyan", expand=True)
@@ -590,3 +560,26 @@ class ViewFormatter:
 
         # Display table
         self.console.print(table)
+
+        # Create header text with progress information
+        header_text = f"{range_str}\n"
+        stats.percentage = round(stats.percentage,2)
+        header_text += f"Progress: [green bold]{stats.dry_days_count}/{total_days} days ({stats.percentage}%)[/green bold]\n"
+
+        # Add progress bar using create_progress_bar
+        header_text += self.create_progress_bar(stats.percentage)
+
+        # Add longest streak if present
+        if stats.longest_streak > 0:
+            header_text += f"\nLongest Streak: [green bold]{stats.longest_streak}[/green bold] days"
+
+        # Create header panel
+        header_panel = Panel(
+            header_text,
+            title="Range View",
+            border_style="green",
+            padding=(1, 2),
+            expand=True  # Align with table width below
+        )
+        self.console.print(header_panel)
+        self.console.print()  # Add spacing

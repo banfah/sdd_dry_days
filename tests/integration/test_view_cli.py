@@ -997,15 +997,18 @@ class TestViewStatsDisplay:
         # Run view --stats command
         cli.run(["view", "--stats"])
 
-        # Verify display_stats_view was called with 4 parameters (AC-4.1)
+        # Verify display_stats_view was called with 7 parameters (AC-4.1)
         cli.view_formatter.display_stats_view.assert_called_once()
         call_args = cli.view_formatter.display_stats_view.call_args
 
-        # Verify we got stats for 30, 60, 90 days (AC-4.1, AC-4.2)
+        # Verify we got stats for 30, 60, 90, 120, 150, 180 days (AC-4.1, AC-4.2)
         stats_30 = call_args[0][0]
         stats_60 = call_args[0][1]
         stats_90 = call_args[0][2]
-        current_streak = call_args[0][3]
+        stats_120 = call_args[0][3]
+        stats_150 = call_args[0][4]
+        stats_180 = call_args[0][5]
+        current_streak = call_args[0][6]
 
         # Verify each stats object has required fields (AC-4.2)
         for stats in [stats_30, stats_60, stats_90]:
@@ -1110,8 +1113,8 @@ class TestViewStatsDisplay:
         cli.view_formatter.display_stats_view.assert_called_once()
         call_args = cli.view_formatter.display_stats_view.call_args
 
-        # Verify current streak is passed as 4th parameter (AC-4.5)
-        current_streak = call_args[0][3]
+        # Verify current streak is passed as 7th parameter (AC-4.5)
+        current_streak = call_args[0][6]
         assert current_streak == 7  # Should match our 7-day streak
 
     def test_view_stats_shows_current_streak_zero_when_no_streak(self, tmp_path):
@@ -1137,7 +1140,7 @@ class TestViewStatsDisplay:
         call_args = cli.view_formatter.display_stats_view.call_args
 
         # Verify current streak is 0 (no streak including today)
-        current_streak = call_args[0][3]
+        current_streak = call_args[0][6]
         assert current_streak == 0
 
     def test_view_stats_includes_progress_bars(self, tmp_path):
@@ -1268,7 +1271,10 @@ class TestViewStatsDisplay:
         stats_30 = call_args[0][0]
         stats_60 = call_args[0][1]
         stats_90 = call_args[0][2]
-        current_streak = call_args[0][3]
+        stats_120 = call_args[0][3]
+        stats_150 = call_args[0][4]
+        stats_180 = call_args[0][5]
+        current_streak = call_args[0][6]
 
         assert stats_30.dry_days_count == 0
         assert stats_60.dry_days_count == 0

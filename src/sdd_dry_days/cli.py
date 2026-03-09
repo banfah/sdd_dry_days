@@ -542,8 +542,12 @@ class CLI:
             # Show encouraging message for empty month
             self.formatter.info("Your journey starts now! Add today as your first dry day.")
         else:
+            # Calculate current streak (across all dry days, not just this month)
+            all_dry_days = self.storage.get_all_dry_days()
+            current_streak = self.streak_calculator.calculate_current_streak(all_dry_days)
+
             # Display formatted month view with calendar grid
-            self.view_formatter.display_month_view(stats)
+            self.view_formatter.display_month_view(stats, current_streak)
 
     def _view_stats(self):
         """Display 30/60/90/120/150/180 day statistics view.
