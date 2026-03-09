@@ -25,6 +25,10 @@ pytest
 # Run specific test file
 pytest tests/unit/test_dry_day.py
 
+# Run specific test class or method
+pytest tests/unit/test_dry_day.py::TestDryDayInstantiation
+pytest tests/unit/test_dry_day.py::TestDryDayInstantiation::test_dry_day_creation_with_valid_date
+
 # Run with coverage report
 pytest --cov=src/sdd_dry_days --cov-report=html
 
@@ -32,6 +36,7 @@ pytest --cov=src/sdd_dry_days --cov-report=html
 pytest -v
 
 # Coverage target: >80% (some modules require >90%)
+# Current status: 324 tests passing (188 unit, 136 integration)
 ```
 
 ### Running the Application
@@ -94,11 +99,17 @@ This project uses a structured specification workflow. Key directories:
 
 - `.claude/steering/`: Product vision, tech standards, project structure guidelines
 - `.claude/specs/`: Feature specifications with requirements, design, and tasks
+- `.claude/bugs/`: Bug tracking with report, analysis, and verification documents
 
 **Steering documents are the source of truth** for:
 - Product vision and principles (`product.md`)
 - Technology choices and architecture (`tech.md`)
 - Coding standards and conventions (`structure.md`)
+
+**Bug Workflow**: When fixing bugs, create a bug directory with:
+- `report.md`: Bug description, reproduction steps, impact assessment
+- `analysis.md`: Root cause investigation and solution approach
+- `verification.md`: Test results and deployment verification
 
 When implementing features, always reference steering documents to ensure alignment.
 
@@ -147,7 +158,7 @@ from sdd_dry_days.core.dry_day import DryDay
 - Overall: >80%
 - Core models: >90%
 - Integration tests must use actual filesystem (with `tmp_path` or `temp_storage_dir` fixture)
-- Current status: 298 tests passing (162 unit, 136 integration)
+- Current status: 324 tests passing (188 unit, 136 integration)
 
 ### Test Organization
 - Mirror source structure in `tests/`
@@ -186,8 +197,18 @@ def test_view_command(tmp_path, mocker):
 
 ### Statistics Model: PeriodStats
 - **9-field dataclass** for period statistics: start_date, end_date, total_days, dry_days_count, percentage, longest_streak, dry_day_dates, available_days, requested_days
+- **Attribute naming**: Always use `dry_days_count`, never `dry_days` (common mistake)
+- **Percentage rounding**: Percentages are rounded to 2 decimal places for display
 - **Limited data indicator**: `available_days < requested_days` triggers "(limited data: X/Y days)" display
 - **Used by all view commands** for consistent statistics calculation
+
+### Current Streak Pattern
+**Critical**: Current streak is a **global metric** (across all dry days), NOT period-specific:
+- **Never** part of PeriodStats (which contains period-specific stats only)
+- **Always** calculated separately using `StreakCalculator.calculate_current_streak(all_dry_days)`
+- **Always** passed as a parameter to view display methods (never accessed as an attribute)
+- **Pattern**: `display_month_view(stats: PeriodStats, current_streak: int)`
+- **Wrong**: Accessing `stats.current_streak` (doesn't exist and will cause AttributeError)
 
 ### View Architecture
 - **StatisticsCalculator** (static methods):
@@ -198,8 +219,19 @@ def test_view_command(tmp_path, mocker):
   - Accepts Console and OutputFormatter as dependencies
   - Handles pagination (50 entries per page with "[Press ENTER for more]")
   - Creates progress bars with color coding (red <50%, yellow 50-75%, green >75%)
-  - Generates calendar grids with ✓ for dry days, * for current day
+  - Generates calendar grids with colored numbers (green for dry days, red for non-dry days)
+  - Current day highlighted with blue background: `[green on blue]` or `[red on blue]`
   - **Filter-then-sort pattern**: Always applies filter before sort (AC-8.5)
+
+### OutputFormatter Methods
+The OutputFormatter class provides styled message methods:
+- `success(message)`: Green panel with ✓ for successful operations
+- `error(message)`: Red panel with ✗ for errors
+- `info(message)`: Blue panel with ℹ for informational messages
+- `already_exists(date)`: Blue panel for duplicate dry days
+- `confirm(message)`: Yellow input prompt for confirmations
+- `range_summary(...)`: Formatted summary for range additions
+- `display_import_summary(...)`: Results table for import operations
 
 ### Performance Constraints
 - Startup time: < 1 second (lazy load dependencies)
@@ -221,6 +253,14 @@ sdd add 2026-03-06                  # Add specific date (ISO format)
 sdd add 03/06/2026                  # Add specific date (US format)
 sdd add --note "Feeling great!"     # Add with note
 sdd add --range 2026-03-01 2026-03-05  # Add date range
+```
+
+### Import Commands (Implemented)
+```bash
+sdd import <file>                    # Import dates from text file
+                                     # Supports: ISO (2026-03-06), US (03/06/2026),
+                                     # European (06-03-2026), compact (20260306)
+                                     # Shows summary with success/error counts
 ```
 
 ### View Commands (Implemented)
@@ -249,3 +289,20 @@ The application uses the Rich library for colorful, engaging terminal output:
 - Info: Blue with info icon
 - Confirmation prompts: Yellow
 - All output wrapped in Rich `Panel` widgets for visual consistency
+
+### Important Rich Library Patterns
+**Emoji Width Issues**: Avoid using emojis in Panel titles or content that needs precise alignment:
+- Emojis have visual width of 2 characters but may be counted as 1
+- This causes jagged borders when Panels and Tables need to align
+- Prefer text-only titles: `"Statistics Overview"` not `"📈 Statistics Overview"`
+- If emojis are needed, use them in content where alignment isn't critical
+
+**Panel and Table Alignment**: When displaying Panel above Table:
+- Use `expand=True` on both Panel and Table for consistent width
+- Avoid emojis in Panel titles for perfect border alignment
+- Test visual output to ensure right borders form straight vertical line
+
+**Calendar Grid Display**:
+- Uses Rich markup for colored numbers: `[green]15[/green]` or `[red]16[/red]`
+- Current day uses background color: `[green on blue]9[/green on blue]`
+- Format: Two-digit numbers with consistent spacing for grid alignment

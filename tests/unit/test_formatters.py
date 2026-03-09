@@ -77,7 +77,6 @@ class TestSuccessMessage:
         assert "✓" in text_str
         assert "Dry day added:" in text_str
         assert "2026-03-07" in text_str
-        assert "🔥" in text_str
         assert "Current streak:" in text_str
         assert "5 days" in text_str
 
